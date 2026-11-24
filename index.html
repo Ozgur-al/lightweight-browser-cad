@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>CAD Workspace</title>
+  <link rel="stylesheet" href="./viewer.css">
+  <script type="importmap">{"imports":{"three":"/vendor/build/three.module.js","three/addons/":"/vendor/examples/jsm/"}}</script>
+  <script type="module" src="./drawing.js"></script>
+</head>
+<body>
+  <header>
+    <div><h1>CAD Workspace</h1><p id="filename">Local CAD workspace</p><p id="drawing-name" hidden>Untitled drawing</p></div>
+    <nav id="workspace-modes" class="segmented" aria-label="Workspace mode">
+      <button data-workspace="viewer" data-key="Shift+V" aria-pressed="true">3D Viewer</button>
+      <button data-workspace="drawing" data-key="Shift+B" aria-pressed="false">2D Drawing</button>
+    </nav>
+    <div id="model-files" class="actions">
+      <label class="button upload" title="Open a GLB or convert a STEP file locally">Open model<input id="file" type="file" accept=".glb,.stp,.step,model/gltf-binary,model/step"></label>
+      <button id="save-converted" hidden>Save GLB</button>
+    </div>
+  </header>
+  <nav id="drawing-menu" aria-label="Drawing command menu" hidden>
+    <details><summary>File</summary><div class="command-list">
+      <button id="new-drawing" data-key="N">New drawing</button>
+      <button id="open-drawing" data-key="Ctrl+O">Open drawing</button>
+      <button id="save-drawing" data-key="Ctrl+S">Save drawing</button>
+      <button data-export="dxf" data-key="Shift+D">Export DXF</button><button data-export="dwg" data-key="Shift+W">Export DWG</button><button data-export="pdf" data-key="Shift+P">Export PDF</button>
+    </div></details>
+    <details><summary>Draw</summary><div class="command-list">
+      <button data-tool="line" data-key="L">Line</button><button data-tool="rectangle" data-key="R">Rectangle</button><button data-tool="square" data-key="Q">Square</button><button data-tool="circle" data-key="C">Circle</button>
+      <button data-tool="dimension" data-key="D">Measure</button><button data-tool="text" data-key="T">Text</button><button id="enter-point" data-key="P" disabled>Enter coordinates</button><button id="enter-length" data-key="K" disabled>Enter line length</button>
+    </div></details>
+    <details><summary>Modify</summary><div class="command-list">
+      <button data-tool="select" data-key="V">Rectangle select</button><button data-tool="lasso" data-key="F">Lasso select</button><button data-tool="move" data-key="M">Move</button><button data-tool="chamfer" data-key="H">Chamfer</button>
+      <button id="edit-setback" data-key="Shift+H">Chamfer setback</button><button id="edit-text" data-key="Shift+T" disabled>Edit text</button><button id="drawing-apply-array" data-key="A" disabled>Rectangular array</button><button id="drawing-delete" data-key="Delete" disabled>Delete</button>
+      <button data-tool="trim" data-key="X">Fence trim</button><button data-tool="fillet" data-key="J">Fillet radius</button>
+      <button id="drawing-undo" data-key="Ctrl+Z" disabled>Undo</button><button id="drawing-redo" data-key="Ctrl+Y" disabled>Redo</button>
+    </div></details>
+    <details><summary>View</summary><div class="command-list">
+      <button id="drawing-fit" data-key="Z">Fit drawing</button><button data-toggle="drawing-ortho" data-key="F8">Ortho</button>
+      <button data-toggle="drawing-grid-snap" data-key="G">Grid snap</button><button data-toggle="drawing-object-snap" data-key="S">Object snap</button><button id="edit-grid" data-key="Shift+G">Grid spacing</button>
+    </div></details>
+    <button id="ortho-indicator" data-toggle="drawing-ortho" aria-pressed="true" title="Ortho (F8)">Ortho on</button>
+    <input id="drawing-file" type="file" accept=".json,.dxf,.dwg,application/json,application/dxf,application/acad" hidden>
+  </nav>
+  <main id="viewer-workspace">
+    <section id="viewport" aria-label="3D viewport">
+      <div class="view-tools" aria-label="Camera views">
+        <button data-view="iso">ISO</button><button data-view="front">Front</button><button data-view="top">Top</button><button data-view="side">Side</button><button id="fit">Fit</button>
+        <button id="measure" aria-pressed="false" disabled>Measure</button>
+        <select id="measure-snap" aria-label="Measurement endpoint" disabled>
+          <option value="surface">Surface point</option><option value="edge">Mesh edge</option><option value="vertex">Mesh vertex</option><option value="free">Free space</option>
+        </select>
+        <button id="clear-measurement" hidden>Clear measurement</button>
+        <button id="cancel-conversion" hidden>Cancel conversion</button>
+        <form id="measure-coordinates" aria-label="Add a free-space point in millimeters" hidden>
+          <label>X <input name="x" type="number" step="any" required></label>
+          <label>Y <input name="y" type="number" step="any" required></label>
+          <label>Z <input name="z" type="number" step="any" required></label>
+          <button>Add point (mm)</button>
+        </form>
+      </div>
+      <p id="pick-hint" role="status" hidden></p>
+      <div class="viewport-footer"><span id="mesh-info"></span><span>Drag to orbit · Right-drag to pan · Scroll to zoom at cursor</span></div>
+      <div id="status" role="status">Loading viewer…</div>
+    </section>
+    <aside aria-label="Model controls">
+      <section>
+        <h2>Display</h2>
+        <label class="field">Visual mode<select id="mode"><option value="solid">Shaded</option><option value="edges">Shaded + edges</option><option value="wire">Wireframe</option><option value="ghost">Transparent</option></select></label>
+        <label class="field">Colors<select id="palette"><option value="cad">Imported</option><option value="auto">By component</option><option value="mono">Monochrome</option></select></label>
+      </section>
+      <section>
+        <h2>Section view</h2>
+        <div class="segmented" id="axes" aria-label="Section axis">
+          <button data-axis="off" aria-pressed="true">Off</button><button data-axis="x" aria-pressed="false">X</button><button data-axis="y" aria-pressed="false">Y</button><button data-axis="z" aria-pressed="false">Z</button>
+        </div>
+        <label class="field cut-label"><span>Coordinate (mm)</span><input id="coordinate" type="number" step="any" disabled></label>
+        <input id="cut" type="range" min="0" max="1000" step="any" value="500" aria-label="Section position" disabled>
+        <button id="pick-section" aria-pressed="false" disabled>Pick on axis or model</button>
+        <label class="check"><input id="flip" type="checkbox" disabled> Flip cut direction</label>
+      </section>
+      <section class="assembly">
+        <div class="section-heading"><h2>Assembly</h2><button id="show-all">Show all</button></div>
+        <div id="tree" aria-label="Assembly components">Open a GLB to inspect its components.</div>
+      </section>
+      <section id="inspector" hidden>
+        <h2 id="selected-name"></h2>
+        <label class="field">Part color<input id="color" type="color" value="#a7b4cf"></label>
+        <div class="actions"><button id="isolate">Isolate</button><button id="reset-color">Reset color</button></div>
+      </section>
+    </aside>
+  </main>
+  <main id="drawing-workspace" hidden>
+    <section id="drawing-viewport" aria-label="2D drafting canvas">
+      <canvas id="drawing-canvas" tabindex="0" aria-label="Drawing canvas"></canvas>
+      <div id="drawing-entry" class="drawing-popover" hidden>
+        <form id="drawing-point-form" class="drawing-inline" aria-label="Point coordinates in millimeters">
+          <span id="drawing-point-stage">Point (mm)</span>
+          <label>X <input name="x" type="text" inputmode="decimal" autocomplete="off" required></label>
+          <label>Y <input name="y" type="text" inputmode="decimal" autocomplete="off" required></label>
+          <button type="submit" tabindex="-1">Add point</button>
+        </form>
+        <form id="drawing-length-form" class="drawing-inline" aria-label="Line length in millimeters" hidden>
+          <label>Length <input name="length" type="text" inputmode="decimal" autocomplete="off" required></label>
+          <button type="submit" tabindex="-1">Draw line</button><span id="drawing-angle"></span>
+        </form>
+      </div>
+      <form id="drawing-array" class="drawing-popover" aria-label="Rectangular array parameters" hidden>
+        <div class="section-heading"><strong>Rectangular array</strong><span id="array-step"></span></div>
+        <label class="field"><span id="array-label"></span><input id="array-value" type="number" required></label>
+        <div class="actions"><button id="array-back" type="button" title="Shift+Enter">Back</button><button id="array-next" type="submit">Next</button><button id="array-cancel" type="button" title="Esc">Cancel</button></div>
+      </form>
+      <div class="viewport-footer"><span id="drawing-cursor">X 0.000 · Y 0.000 mm</span><span>Right-drag to pan · Scroll to zoom</span></div>
+      <p id="drawing-status" role="status">Choose a tool to start drawing.</p>
+    </section>
+    <aside aria-label="Drafting controls">
+      <section>
+        <h2>Drawing</h2>
+        <p id="drawing-count" class="drawing-selection">No selection</p>
+      </section>
+      <section id="drawing-chamfer" hidden>
+        <h2>Chamfer</h2>
+        <label class="field">Setback (mm)<input id="chamfer-distance" type="number" min="0.001" max="1000000000" step="any" value="5"></label>
+      </section>
+      <section id="drawing-fillet" hidden>
+        <h2>Fillet</h2>
+        <label class="field">Radius (mm)<input id="fillet-radius" type="number" min="0.001" max="1000000000" step="any" value="2"></label>
+      </section>
+      <section id="drawing-text" hidden>
+        <h2>Text note</h2>
+        <form id="drawing-text-form">
+          <label class="note-content">Text<input id="note-text" type="text" maxlength="1024" required placeholder="Plate thickness: 1.5 mm"></label>
+          <label class="field">Height (mm)<input id="note-height" type="number" min="0.001" max="1000000000" step="any" value="3" required></label>
+          <button id="note-apply" type="submit">Ready to place</button>
+        </form>
+      </section>
+      <section>
+        <h2>Snapping</h2>
+        <label class="check"><input id="drawing-ortho" type="checkbox" checked> Ortho for lines (F8)</label>
+        <label class="check"><input id="drawing-object-snap" type="checkbox" checked> Endpoints, midpoints, and centers</label>
+        <label class="check"><input id="drawing-grid-snap" type="checkbox" checked> Snap to grid</label>
+        <label class="field">Grid spacing (mm)<input id="drawing-grid-step" type="number" min="0.001" max="1000000000" step="any" value="1"></label>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>

@@ -1,0 +1,100 @@
+[
+  {
+    "url": "https://nodejs.org/dist/v22.23.5/node-v22.23.5-win-x64.zip",
+    "hash": "4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3",
+    "group": "node",
+    "file": "node-v22.23.5-win-x64.zip",
+    "size": 35630346
+  },
+  {
+    "url": "https://www.python.org/ftp/python/3.13.15/python-3.13.15-embed-amd64.zip",
+    "hash": "d1f04d990aee1253d8569e8e5104e30fa9f5fa830899f14843448872d936a2cf",
+    "group": "python",
+    "file": "python-3.13.15-embed-amd64.zip",
+    "size": 11009825
+  },
+  {
+    "url": "https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.15/dotnet-runtime-10.0.15-win-x64.zip",
+    "hash": "06f0bedd59ae4ac722ada805a6d6bbf605bcdc790c71f59b7003878072902b5cde5dec8c40c0baa81192660d4748e9d79afdbdcb0c0ea9d6b821d0a044c4c6dd",
+    "algorithm": "SHA512",
+    "group": "dotnet",
+    "file": "dotnet-runtime-10.0.15-win-x64.zip"
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/57/48/4595c22b0ae1b4759f209a13d21dadd229db6c374d9b0a95afa7ed0c4714/cadquery_ocp_novtk-7.9.3.1.1-cp313-cp313-win_amd64.whl",
+    "hash": "3390be6d8199a50b01ae0137a60f56d0cfecd8753dbee08532bbbeb8b7169682",
+    "group": "ocp",
+    "file": "cadquery_ocp_novtk-7.9.3.1.1-cp313-cp313-win_amd64.whl",
+    "size": 46364506
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/30/c0/04e9363a99fee892de2776820e3dcf04f8825b6edc9580efe3416c9465a7/cadquery_ocp_proxy-7.9.3.1.1-py3-none-any.whl",
+    "hash": "ca4164ec4b54956d9fc3e68c67d555b5486cb963c2f71e18df005ba16b921c91",
+    "group": "ocp",
+    "file": "cadquery_ocp_proxy-7.9.3.1.1-py3-none-any.whl",
+    "size": 3322
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/6c/53/c56cbbee8fc51fef0a8e775488c4ef5205047a190ad850c43ad4b2ae7b35/charset_normalizer-3.5.3-cp313-cp313-win_amd64.whl",
+    "hash": "cb18428af7399e0a6f7e3b45f110d57a1a47cf07fd4b3ce50e2366d99a38959a",
+    "group": "cad",
+    "file": "charset_normalizer-3.5.3-cp313-cp313-win_amd64.whl",
+    "size": 213792
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/bf/3b/504062e32f149f66fda32f664d27eded52780a201295058035f15476044f/ezdxf-1.4.5-cp313-cp313-win_amd64.whl",
+    "hash": "3b8de3e74ef5190bf5e3c59797fb2edc01f7ed3252014b51aae7c7bb40db0fb3",
+    "group": "cad",
+    "file": "ezdxf-1.4.5-cp313-cp313-win_amd64.whl",
+    "size": 3049289
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/61/2b/6c6f578176edeec83c5e02b7e745c1c8029f8cec4e32b4898d2c573bb881/fonttools-4.68.0-cp313-cp313-win_amd64.whl",
+    "hash": "6ed796b220654b4d37ad20af73419ec7969b669dd678cab88afb602c5683a331",
+    "group": "cad",
+    "file": "fonttools-4.68.0-cp313-cp313-win_amd64.whl",
+    "size": 2531658
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/45/74/bb9161943fb65caf24e4bb04c788f5c7815e6cb78ac595e7f46781033c82/numpy-2.5.5-cp313-cp313-win_amd64.whl",
+    "hash": "e0608d1585557b68dcb6a70a41654f7536567960afad79d91752d2863b242b68",
+    "group": "cad",
+    "file": "numpy-2.5.5-cp313-cp313-win_amd64.whl",
+    "size": 12573354
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/d7/ed/1b16fb66a37e1b9e41370b93b2c614c7da761a5b2a41dc333f7af4639962/pillow-13.0.0-cp313-cp313-win_amd64.whl",
+    "hash": "9dda0788a9932776a75d8bcc020076edc308ce2508b51f6739a45e3158b3fc42",
+    "group": "cad",
+    "file": "pillow-13.0.0-cp313-cp313-win_amd64.whl",
+    "size": 7284777
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/38/bb/d215ee7c73b61497b28a5503f9f53523f294fcc936762b7caf90e0c1c2b5/pyparsing-3.3.3-py3-none-any.whl",
+    "hash": "ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4",
+    "group": "cad",
+    "file": "pyparsing-3.3.3-py3-none-any.whl",
+    "size": 126420
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/57/66/e040586fe6f9ae7f3a6986186653791fb865947f0b745290ee4ab026b834/reportlab-4.4.4-py3-none-any.whl",
+    "hash": "299b3b0534e7202bb94ed2ddcd7179b818dcda7de9d8518a57c85a58a1ebaadb",
+    "group": "cad",
+    "file": "reportlab-4.4.4-py3-none-any.whl",
+    "size": 1954981
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+    "hash": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+    "group": "cad",
+    "file": "typing_extensions-4.16.0-py3-none-any.whl",
+    "size": 45571
+  },
+  {
+    "url": "https://files.pythonhosted.org/packages/44/3c/d717024885424591d5376220b5e836c2d5293ce2011523c9de23ff7bf068/pip-25.3-py3-none-any.whl",
+    "hash": "9655943313a94722b7774661c21049070f6bbb0a1516bf02f7c8d5d9201514cd",
+    "group": "pip",
+    "file": "pip-25.3-py3-none-any.whl",
+    "size": 1778622
+  }
+]
