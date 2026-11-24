@@ -1,0 +1,42 @@
+name: Release
+
+# Push a tag like v1.0.0 to publish CAD-Workspace-Windows-x64-Setup.zip.
+# Display Design Tool Hub bundles this asset at build time (npm run sync:cad).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install the three.js runtime
+        run: npm ci --omit=dev
+
+      - name: Build the DWG helper
+        run: dotnet publish dwg-tool/DwgBridge.csproj -c Release -o .local-dwg-tool
+
+      - name: Package the workspace
+        run: python windows-setup/build.py
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" CAD-Workspace-Windows-x64-Setup.zip --title "${{ github.ref_name }}" --generate-notes
