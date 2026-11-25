@@ -65,6 +65,12 @@
       <p id="pick-hint" role="status" hidden></p>
       <div class="viewport-footer"><span id="mesh-info"></span><span>Drag to orbit · Right-drag to pan · Scroll to zoom at cursor</span></div>
       <div id="status" role="status">Loading viewer…</div>
+      <div id="convert-progress" hidden>
+        <p id="convert-name"></p>
+        <div class="convert-line"><span id="convert-stage"></span><span id="convert-percent"></span></div>
+        <div id="convert-bar" role="progressbar" aria-label="STEP conversion" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+        <div class="convert-line"><span id="convert-step"></span><span id="convert-elapsed"></span></div>
+      </div>
     </section>
     <aside aria-label="Model controls">
       <section>

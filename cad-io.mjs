@@ -25,11 +25,27 @@ const jobs = {
   '/api/export/pdf': ['2d', 'input.json', 'output.pdf', 'application/pdf', 32 * 2 ** 20, 120_000],
 };
 const busy = new Set();
+// Latest STEP conversion progress, polled by the viewer through GET /api/progress.
+let stepProgress = { active: false };
 
-function execute(command, args, cwd, signal) {
+function setStepProgress(stage, fraction) {
+  stepProgress = { active: true, stage, fraction, started: stepProgress.active ? stepProgress.started : Date.now() };
+}
+
+function execute(command, args, cwd, signal, onProgress) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, signal, windowsHide: true });
     let output = '';
+    let pending = '';
+    child.stdout.on('data', chunk => {
+      if (!onProgress) return;
+      const lines = (pending + chunk).split(/\r?\n/);
+      pending = lines.pop();
+      for (const line of lines) {
+        const match = /^PROGRESS (\w+)(?: ([\d.]+))?$/.exec(line);
+        if (match) onProgress(match[1], match[2] === undefined ? undefined : Number(match[2]));
+      }
+    });
     for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { output = (output + chunk).slice(-8000); });
     let failure;
     child.on('error', error => { failure = error; });
@@ -37,14 +53,14 @@ function execute(command, args, cwd, signal) {
       if (failure?.code === 'ENOENT') reject(new Error('A local CAD converter is missing. See setup in README.md.'));
       else if (failure) reject(failure);
       else if (code === 0) resolve();
-      else reject(new Error(output.trim().split(/\r?\n/).filter(Boolean).at(-1)?.slice(0, 400) || `The converter exited with code ${code}.`));
+      else reject(new Error(output.trim().split(/\r?\n/).filter(line => line && !line.startsWith('PROGRESS ')).at(-1)?.slice(0, 400) || `The converter exited with code ${code}.`));
     });
   });
 }
 
 async function convert(path, input, output, directory, signal) {
   if (path === '/api/step') {
-    await execute(python, ['-u', join(workspace, 'convert.py'), input, output], directory, signal);
+    await execute(python, ['-u', join(workspace, 'convert.py'), input, output], directory, signal, setStepProgress);
     return;
   }
   const runPython = (operation, source, target) => execute(python, [join(workspace, 'drawing-io.py'), operation, source, target], directory, signal);
@@ -66,6 +82,12 @@ function reply(response, code, message) {
 }
 
 export async function handleCadRequest(request, response, path) {
+  if (path === '/api/progress' && request.method === 'GET') {
+    const { started, ...state } = stepProgress;
+    response.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    response.end(JSON.stringify(state.active ? { ...state, elapsed: Date.now() - started } : state));
+    return true;
+  }
   const job = Object.hasOwn(jobs, path) ? jobs[path] : undefined;
   if (!job) return false;
   const host = request.headers.host;
@@ -85,6 +107,7 @@ export async function handleCadRequest(request, response, path) {
     return true;
   }
   busy.add(group);
+  if (group === '3d') setStepProgress('upload', 0);
   const controller = new AbortController();
   const stop = () => controller.abort();
   response.once('close', stop);
@@ -95,6 +118,7 @@ export async function handleCadRequest(request, response, path) {
     let received = 0;
     const sizeCheck = new Transform({ transform(chunk, _, callback) {
       received += chunk.length;
+      if (group === '3d') setStepProgress('upload', Math.min(received / length, 1));
       callback(received > limit ? new Error('Upload exceeds the conversion limit.') : null, chunk);
     } });
     await pipeline(request, sizeCheck, createWriteStream(join(directory, input)), { signal: controller.signal });
@@ -110,6 +134,7 @@ export async function handleCadRequest(request, response, path) {
     response.removeListener('close', stop);
     clearTimeout(timer);
     busy.delete(group);
+    if (group === '3d') stepProgress = { active: false };
     if (directory) await rm(directory, { recursive: true, force: true, maxRetries: 2 }).catch(error => console.error('Could not clean up conversion files:', error.message));
   }
   return true;

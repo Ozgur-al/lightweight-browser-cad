@@ -463,14 +463,18 @@ function dispose(object) {
   for (const texture of textures) texture.dispose();
 }
 
-async function load(url, name, local = false) {
+async function load(url, name, local = false, onProgress) {
   const current = ++request;
-  status.hidden = false;
-  status.textContent = `Loading ${name}…`;
+  if (!onProgress) {
+    status.hidden = false;
+    status.textContent = `Loading ${name}…`;
+  }
   let gltf;
   try {
     gltf = await new GLTFLoader().loadAsync(url, progress => {
-      if (current === request && progress.total) status.textContent = `Loading ${name} · ${Math.round(progress.loaded / progress.total * 100)}%`;
+      if (current !== request || !progress.total) return;
+      if (onProgress) onProgress(progress.loaded / progress.total);
+      else status.textContent = `Loading ${name} · ${Math.round(progress.loaded / progress.total * 100)}%`;
     });
     if (current !== request) {
       dispose(gltf.scene);
@@ -508,6 +512,7 @@ async function load(url, name, local = false) {
     return true;
   } catch (error) {
     if (current !== request) return;
+    status.hidden = false;
     status.textContent = error.response?.status === 404 && !local
       ? 'No default model found. Choose Open model to load a GLB or STEP file.'
       : `Could not open ${name}. ${error.message}`;
@@ -689,6 +694,76 @@ $('reset-color').addEventListener('click', () => {
   for (const part of selected.parts) part.override = undefined;
   updateAppearance();
 });
+// Share of the overall bar per stage. Reading, transfer and writing report no
+// percentage from OpenCascade, so they show a busy stripe within their share.
+const conversionStages = [
+  ['upload', 'Uploading', 0.04],
+  ['read', 'Reading STEP', 0.38],
+  ['transfer', 'Transferring assembly', 0.16],
+  ['mesh', 'Meshing surfaces', 0.28],
+  ['write', 'Writing GLB', 0.07],
+  ['download', 'Receiving model', 0.02],
+  ['open', 'Opening model', 0.05],
+];
+
+function conversionProgress(name) {
+  const panel = $('convert-progress');
+  const bar = $('convert-bar');
+  const started = performance.now();
+  let stage = 'upload';
+  let fraction = 0;
+  let done = false;
+  const clock = ms => {
+    const seconds = Math.floor(ms / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  };
+  const render = () => {
+    const index = Math.max(0, conversionStages.findIndex(([key]) => key === stage));
+    const [, label, share] = conversionStages[index];
+    const before = conversionStages.slice(0, index).reduce((sum, [, , value]) => sum + value, 0);
+    const known = typeof fraction === 'number' && Number.isFinite(fraction);
+    const overall = Math.min(1, before + share * (known ? Math.min(Math.max(fraction, 0), 1) : 0));
+    $('convert-stage').textContent = known ? `${label} · ${Math.round(fraction * 100)}%` : `${label}…`;
+    $('convert-percent').textContent = `${Math.round(overall * 100)}%`;
+    $('convert-step').textContent = `Step ${index + 1} of ${conversionStages.length}`;
+    $('convert-elapsed').textContent = `${clock(performance.now() - started)} elapsed`;
+    bar.firstElementChild.style.width = `${overall * 100}%`;
+    bar.classList.toggle('busy', !known);
+    bar.setAttribute('aria-valuenow', String(Math.round(overall * 100)));
+    bar.setAttribute('aria-valuetext', $('convert-stage').textContent);
+  };
+  const poll = async () => {
+    while (!done) {
+      try {
+        const state = await (await fetch('/api/progress', { cache: 'no-store' })).json();
+        if (!done && state.active && ['upload', 'read', 'transfer', 'mesh', 'write'].includes(stage)) {
+          stage = state.stage;
+          fraction = state.fraction;
+        }
+      } catch {
+        // Older converters have no progress endpoint; the bar keeps its last state.
+      }
+      if (!done) render();
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+  $('convert-name').textContent = `Converting ${name}`;
+  panel.hidden = false;
+  render();
+  poll();
+  return {
+    set(next, value) {
+      stage = next;
+      fraction = value;
+      render();
+    },
+    stop() {
+      done = true;
+      panel.hidden = true;
+    },
+  };
+}
+
 async function openModel(file) {
   if (stepConversion) return;
   if (/\.glb$/i.test(file.name)) {
@@ -708,13 +783,15 @@ async function openModel(file) {
   stepConversion = controller;
   $('file').disabled = true;
   $('cancel-conversion').hidden = false;
-  status.hidden = false;
-  status.textContent = `Converting ${file.name} locally. Large assemblies can take several minutes.`;
+  status.hidden = true;
+  const progress = conversionProgress(file.name);
   try {
     const response = await convertCad('step', file, controller.signal);
+    progress.set('download');
     const blob = await response.blob();
     $('cancel-conversion').hidden = true;
-    if (await load(URL.createObjectURL(blob), file.name, true)) {
+    progress.set('open', 0);
+    if (await load(URL.createObjectURL(blob), file.name, true, fraction => progress.set('open', fraction))) {
       convertedModel = { blob, name: file.name.replace(/\.[^.]+$/, '.glb') };
       $('save-converted').hidden = false;
     }
@@ -722,6 +799,7 @@ async function openModel(file) {
     status.hidden = false;
     status.textContent = controller.signal.aborted ? 'STEP conversion canceled.' : `Could not convert ${file.name}. ${error.message}`;
   } finally {
+    progress.stop();
     stepConversion = undefined;
     $('file').disabled = false;
     $('cancel-conversion').hidden = true;
